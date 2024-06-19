@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import math
 
 # Configuration
 API_KEY = ""
@@ -18,6 +19,17 @@ if "company" in REDMINE_URL:
     print_red("Please set your Redmine URL in the script.")
     exit(1)
 
+def sanitize_floats(data):
+    if isinstance(data, float):
+        if math.isnan(data) or math.isinf(data):
+            return None
+        return data
+    elif isinstance(data, dict):
+        return {k: sanitize_floats(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [sanitize_floats(v) for v in data]
+    return data
+
 def log_time(issue_id, hours, comments, date_spent):
 
     date = (str(date_spent))[:10]
@@ -33,6 +45,9 @@ def log_time(issue_id, hours, comments, date_spent):
             "spent_on": date
         }
     }
+
+    # Nettoyer les données avant de les convertir en JSON
+    json_data = sanitize_floats(json_data)
 
     headers = {
         "Content-Type": "application/json",

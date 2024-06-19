@@ -1,22 +1,20 @@
 import requests
-import json
 import datetime
 from collections import defaultdict
-from termcolor import colored
 
 # Configurations
 API_KEY = ""
-USER_NAME = "Your name"
+USER_NAME = "Your Name"
 REDMINE_URL = "https://redmine.company.com"
 
 def print_green(message):
-    print(colored(message, 'green'))
+    print(f"\033[32m{message}\033[0m")
 
 def print_red(message):
-    print(colored(message, 'red'))
+    print(f"\033[31m{message}\033[0m")
 
 def print_yellow(message):
-    print(colored(message, 'yellow'))
+    print(f"\033[33m{message}\033[0m")
 
 if not API_KEY:
     print_red("Please set your Redmine API key in the script.")
@@ -64,7 +62,7 @@ user_dict = {user_id: USER_NAME}
 
 # Loop through each user ID and retrieve the logged time
 for user_id, user_name in user_dict.items():
-    print(f"\nUtilisateur {colored(user_name, 'blue')} (ID: {user_id}) depuis le {date_from} au {date_to}")
+    print(f"\nUtilisateur \033[34m{user_name}\033[0m (ID: {user_id}) depuis le {date_from} au {date_to}")
 
     response = requests.get(f"{REDMINE_URL}/time_entries.json?user_id={user_id}&from={date_from}&to={date_to}&limit=50",
                             headers={"X-Redmine-API-Key": API_KEY})
