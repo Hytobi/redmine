@@ -27,5 +27,5 @@ if [ ! -f "timesheet.xlsx" ]; then
     exit 1
 fi
 
-./post_by_file.sh
-./check_redmine.sh
+./post_time_entries.sh
+./check_time_entries.sh

@@ -1,7 +1,7 @@
 import subprocess
 
-script1 = './post_redmine.py'
-script2 = './redmine.py'
+script1 = './post_time_entries.py'
+script2 = './check_time_entries.py'
 
 # Exécution du premier script
 processPost = subprocess.run(['python', script1], capture_output=True, text=True)
