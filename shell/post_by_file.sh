@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#TODO: Fix la sup du excel
+
 
 # Configuration
 API_KEY=""
@@ -18,19 +18,29 @@ if [[ $REDMINE_URL == *"company"* ]]; then
     exit 1
 fi
 
-# Fonction pour enregistrer le temps passé
+# POST /time_entries.json
 log_time() {
     local issue_id="$1"
     local hours="$2"
     local comments="$3"
     local date_spent="$4"
 
-    # si l'id n'est pas un nombre: cas de suppression de la ligne ?
+    # If the issue ID is not a number or is empty, return
     if ! [[ "$issue_id" =~ ^[0-9]+$ ]]; then
+        if [ -z "$issue_id" ]; then
+            return
+        fi
         print_red "L'ID de l'issue doit être un nombre: $issue_id"
         return
     fi
 
+    # If one of the required fields is empty, return
+    if [ -z "$hours" ] || [ -z "$date_spent" ]; then
+        print_red "Hours and date_spent are required fields for issue: $issue_id"
+        return
+    fi
+
+    # Create a JSON payload
     local json_data=$(jq -n \
         --arg issue_id "$issue_id" \
         --arg hours "$hours" \
@@ -45,31 +55,31 @@ log_time() {
             }
         }')
 
+    # Send a POST request to log time
     local response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
         -H "Content-Type: application/json" \
         -H "X-Redmine-API-Key: $API_KEY" \
         -d "$json_data" \
         "$REDMINE_URL/time_entries.json")
 
+    # Print the response message
     if [ "$response" -eq 201 ]; then
-        print_green "Time logged successfully for issue $issue_id."
-    else if [ "$response" -eq 422 ]; then
-        error=`$response | jq -r '.errors'`
-        print_red "Failed to log time for issue $issue_id. error: $error."
+        print_green "Time logged successfully issue: $issue_id date_spent: $date_spent."
+    elif [ "$response" -eq 422 ]; then
+        print_red "Failed to log time for issue $issue_id for $date_spent. You may have already logged time on this date."
     else
         print_red "Failed to log time for issue $issue_id. HTTP response code: $response"
     fi
 }
 
-# Convertir le fichier Excel en CSV
+# Convert the Excel file to CSV
 xlsx2csv timesheet.xlsx timesheet.csv
-
 if [ $? -ne 0 ]; then
     echo "Failed to convert the Excel file to CSV."
     exit 1
 fi
 
-# Lire le fichier CSV et boucler sur les lignes
+# Read the CSV file and log time for each row
 while IFS=, read -r issue_id hours comments date_spent; do
     # Skip the header row
     if [ "$issue_id" != "issue_id" ]; then
@@ -77,13 +87,18 @@ while IFS=, read -r issue_id hours comments date_spent; do
     fi
 done < timesheet.csv
 
-# Nettoyage des fichiers temporaires
+# Remove the CSV file
 rm timesheet.csv
 
-## Demand a l'utilisateur s'il veut efacer le contenu du fichier exec (mais laisse les colonnes)
-read -p "Voulez-vous effacer le contenu du fichier Excel ? [y/n]: " response
-if [ "$response" == "y" ]; then
+# Ask the user if they want to clear the Excel file
+read -p "Do you want to clear the Excel file? [Y/n] " -n 1 -r
+echo
+if [[ -z "$REPLY" || $REPLY =~ ^[Yy]$ ]]; then
     xlsx2csv --skip-empty-rows timesheet.xlsx timesheet.csv
     mv timesheet.csv timesheet.xlsx
     print_green "Le fichier Excel a été vidé."
+elif [[ $REPLY =~ ^[Nn]$ ]]; then
+    print_green "Le fichier Excel n'a pas été vidé."
+else
+    print_red "Invalid input. The Excel file was not cleared."
 fi
